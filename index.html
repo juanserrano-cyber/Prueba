@@ -52,6 +52,15 @@
 
     .spacer {
       flex: 1;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
     }
 
     button {
@@ -79,6 +88,7 @@
       color: var(--text);
       font-weight: 600;
       min-width: 200px;
+      min-width: 160px;
     }
 
     .calendar {
@@ -106,6 +116,28 @@
     .month-grid {
       display: grid;
       grid-template-columns: 84px repeat(7, 1fr);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .week-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .week-range {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
       gap: 1px;
       background: rgba(148, 163, 184, 0.35);
     }
@@ -128,6 +160,13 @@
       letter-spacing: 0.02em;
       text-transform: uppercase;
       background: linear-gradient(180deg, rgba(14, 165, 233, 0.12), rgba(14, 165, 233, 0.04));
+    .day {
+      background: var(--card);
+      padding: 1rem;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .day-header {
@@ -140,11 +179,18 @@
     .day-name {
       font-size: 0.85rem;
       text-transform: uppercase;
+    }
+
+    .day-name {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.85rem;
       letter-spacing: 0.04em;
     }
 
     .date-number {
       font-size: 1.3rem;
+      font-size: 1.6rem;
       font-weight: 800;
     }
 
@@ -171,6 +217,9 @@
       display: inline-flex;
       align-items: center;
       padding: 0.2rem 0.5rem;
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
       border-radius: 999px;
       background: rgba(14, 165, 233, 0.12);
       color: var(--accent);
@@ -211,6 +260,13 @@
         flex-direction: row;
         justify-content: flex-start;
         gap: 0.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 720px) {
+      .days {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       }
     }
   </style>
@@ -247,6 +303,29 @@
         <div class="month-name" id="month-name">Enero 2026</div>
       </div>
       <div class="month-grid" id="month-grid"></div>
+    <h1>Calendario semanal 2026</h1>
+    <p class="description">
+      Navega semana a semana por todo el año 2026. El calendario comienza los lunes e incluye los días
+      necesarios de finales de 2025 y principios de 2027 para mostrar semanas completas.
+    </p>
+
+    <section class="controls">
+      <div class="button-group">
+        <button id="prev">Semana anterior</button>
+        <button id="next">Semana siguiente</button>
+      </div>
+      <label>
+        Ir a la semana:
+        <select id="week-selector"></select>
+      </label>
+    </section>
+
+    <section class="calendar">
+      <header class="week-label">
+        <div id="week-title">Semana 1</div>
+        <div class="week-range" id="week-range"></div>
+      </header>
+      <div class="days" id="days"></div>
     </section>
   </main>
 
@@ -296,6 +375,24 @@
       const weeks = [];
       const cursor = new Date(start);
       while (cursor <= finish) {
+
+    const weekDays = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+    function buildWeeks(year) {
+      const firstDay = new Date(year, 0, 1);
+      const start = new Date(firstDay);
+      const firstWeekday = start.getDay() || 7; // lunes = 1 ... domingo = 7
+      start.setDate(start.getDate() - (firstWeekday - 1));
+
+      const lastDay = new Date(year, 11, 31);
+      const lastWeekday = lastDay.getDay() || 7;
+      const end = new Date(lastDay);
+      end.setDate(end.getDate() + (7 - lastWeekday));
+
+      const weeks = [];
+      const cursor = new Date(start);
+
+      while (cursor <= end) {
         const days = [];
         for (let i = 0; i < 7; i++) {
           const date = new Date(cursor);
@@ -315,6 +412,37 @@
     function createDayCell(day, weekdayIndex) {
       const cell = document.createElement("div");
       cell.className = `day${day.inside ? "" : " outside"}`;
+          days.push({
+            date,
+            inside: date.getFullYear() === year,
+          });
+        }
+        weeks.push(days);
+        cursor.setDate(cursor.getDate() + 7);
+      }
+      return weeks;
+    }
+
+    function formatDate(date) {
+      return date.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    function formatRange(days) {
+      const start = days[0].date;
+      const end = days[6].date;
+      const sameMonth = start.getMonth() === end.getMonth();
+      const startLabel = start.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+      const endLabel = end.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      return sameMonth ? `${startLabel} - ${endLabel}` : `${startLabel} - ${endLabel}`;
+    }
+
+    function renderDay(day) {
+      const container = document.createElement("div");
+      container.className = `day${day.inside ? "" : " outside"}`;
 
       const header = document.createElement("div");
       header.className = "day-header";
@@ -322,6 +450,7 @@
       const name = document.createElement("div");
       name.className = "day-name";
       name.textContent = weekDays[weekdayIndex];
+      name.textContent = weekDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1];
 
       const number = document.createElement("div");
       number.className = "date-number";
@@ -402,6 +531,54 @@
     document.getElementById("next-month").addEventListener("click", () => {
       currentMonth = (currentMonth + 1) % 12;
       renderMonth(currentMonth);
+      container.appendChild(header);
+
+      if (!day.inside) {
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = `${day.date.getFullYear()}`;
+        container.appendChild(badge);
+      }
+
+      return container;
+    }
+
+    function renderCalendar(weeks, index) {
+      const week = weeks[index];
+      const daysContainer = document.getElementById("days");
+      daysContainer.innerHTML = "";
+      week.forEach((day) => daysContainer.appendChild(renderDay(day)));
+
+      document.getElementById("week-title").textContent = `Semana ${index + 1}`;
+      document.getElementById("week-range").textContent = formatRange(week);
+      document.getElementById("week-selector").value = index;
+    }
+
+    const weeks = buildWeeks(year);
+    const selector = document.getElementById("week-selector");
+    weeks.forEach((_, i) => {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `Semana ${i + 1}`;
+      selector.appendChild(option);
+    });
+
+    let currentWeek = weeks.findIndex((week) => week.some((day) => day.date.getFullYear() === year));
+    renderCalendar(weeks, currentWeek);
+
+    document.getElementById("prev").addEventListener("click", () => {
+      currentWeek = (currentWeek - 1 + weeks.length) % weeks.length;
+      renderCalendar(weeks, currentWeek);
+    });
+
+    document.getElementById("next").addEventListener("click", () => {
+      currentWeek = (currentWeek + 1) % weeks.length;
+      renderCalendar(weeks, currentWeek);
+    });
+
+    selector.addEventListener("change", (event) => {
+      currentWeek = Number(event.target.value);
+      renderCalendar(weeks, currentWeek);
     });
   </script>
 </body>
