@@ -53,12 +53,76 @@
       line-height: 1.6;
     }
 
-    .counter {
-      text-align: center;
-      font-size: 4.5rem;
-      font-weight: 800;
-      color: var(--accent);
-      letter-spacing: 0.04em;
+    .clock {
+      display: grid;
+      place-items: center;
+      gap: 0.75rem;
+    }
+
+    .dial {
+      width: min(260px, 70vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, rgba(37, 99, 235, 0.15), transparent 60%),
+        repeating-conic-gradient(
+          from -90deg,
+          rgba(148, 163, 184, 0.6) 0deg 2deg,
+          transparent 2deg 30deg
+        ),
+        #f8fafc;
+      border: 10px solid rgba(37, 99, 235, 0.15);
+      position: relative;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 20px rgba(15, 23, 42, 0.1);
+    }
+
+    .dial::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.2);
+      z-index: 3;
+    }
+
+    .hand {
+      position: absolute;
+      bottom: 50%;
+      left: 50%;
+      transform-origin: 50% 100%;
+      transform: translateX(-50%) rotate(0deg);
+      border-radius: 999px;
+    }
+
+    .hand.minute {
+      width: 6px;
+      height: 42%;
+      background: var(--accent);
+      z-index: 2;
+    }
+
+    .hand.second {
+      width: 2px;
+      height: 48%;
+      background: #f97316;
+      opacity: 0.85;
+      z-index: 1;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .status {
@@ -111,7 +175,13 @@
       <p>Presiona iniciar para contar hacia atrás desde 100 hasta 0. La cuenta se detiene automáticamente al llegar a cero.</p>
     </header>
 
-    <div class="counter" id="counter">100</div>
+    <div class="clock" id="counter" aria-live="polite">
+      <span class="sr-only" id="counter-value">100</span>
+      <div class="dial" aria-hidden="true">
+        <div class="hand minute"></div>
+        <div class="hand second"></div>
+      </div>
+    </div>
     <div class="status" id="status">Listo para comenzar.</div>
 
     <section class="controls">
@@ -123,6 +193,9 @@
 
   <script>
     const counter = document.getElementById("counter");
+    const counterValue = document.getElementById("counter-value");
+    const minuteHand = document.querySelector(".hand.minute");
+    const secondHand = document.querySelector(".hand.second");
     const status = document.getElementById("status");
     const startBtn = document.getElementById("start");
     const pauseBtn = document.getElementById("pause");
@@ -133,7 +206,12 @@
     let timerId = null;
 
     const updateUI = () => {
-      counter.textContent = currentValue;
+      counterValue.textContent = currentValue;
+      const progress = (START_VALUE - currentValue) / START_VALUE;
+      const minuteAngle = progress * 360;
+      const secondAngle = progress * 360 * 6;
+      minuteHand.style.transform = `translateX(-50%) rotate(${minuteAngle}deg)`;
+      secondHand.style.transform = `translateX(-50%) rotate(${secondAngle}deg)`;
       startBtn.disabled = timerId !== null || currentValue === 0;
       pauseBtn.disabled = timerId === null;
     };
